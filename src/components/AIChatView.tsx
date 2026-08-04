@@ -60,13 +60,18 @@ export const AIChatView: React.FC<AIChatViewProps> = ({ onOpenCreatePostWithIdea
         };
         setMessages((prev) => [...prev, aiMsg]);
       } else {
-        throw new Error(data.error || 'Chat failed');
+        const detailMsg = data.details || data.error || 'Chat response failed';
+        throw new Error(detailMsg);
       }
     } catch (err: any) {
+      const errorText = err?.message
+        ? `⚠️ AI Error: ${err.message}`
+        : "I'm having trouble connecting right now. If deployed on Vercel, check that GEMINI_API_KEY is added to Vercel Environment Variables.";
+
       const errorMsg: ChatMessage = {
         id: `err_${Date.now()}`,
         sender: 'ai',
-        text: "I'm having trouble connecting right now. Please check your Gemini API configuration or try again.",
+        text: errorText,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);

@@ -47,10 +47,13 @@ export const AIStudio: React.FC<AIStudioProps> = ({
   const [copied, setCopied] = useState(false);
   const [selectedChannelId, setSelectedChannelId] = useState(channels[0]?.id || '');
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const handleGeneratePost = async () => {
     if (!topic.trim()) return;
     setIsGenerating(true);
     setGeneratedOutput(null);
+    setErrorMessage(null);
 
     try {
       const res = await fetch('/api/ai/generate-post', {
@@ -66,9 +69,12 @@ export const AIStudio: React.FC<AIStudioProps> = ({
           imagePrompt: data.imagePrompt,
           catchyTitle: data.catchyTitle,
         });
+      } else {
+        setErrorMessage(data.details || data.error || 'Failed to generate post');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMessage(err?.message || 'Network error while contacting AI API.');
     } finally {
       setIsGenerating(false);
     }
@@ -77,6 +83,7 @@ export const AIStudio: React.FC<AIStudioProps> = ({
   const handleEnhanceDraft = async () => {
     if (!draftInput.trim()) return;
     setIsEnhancing(true);
+    setErrorMessage(null);
     try {
       const res = await fetch('/api/ai/enhance-post', {
         method: 'POST',
@@ -86,9 +93,12 @@ export const AIStudio: React.FC<AIStudioProps> = ({
       const data = await res.json();
       if (data.success) {
         setEnhancedResult(data.enhancedText);
+      } else {
+        setErrorMessage(data.details || data.error || 'Failed to enhance draft');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMessage(err?.message || 'Network error while enhancing draft.');
     } finally {
       setIsEnhancing(false);
     }
@@ -96,6 +106,7 @@ export const AIStudio: React.FC<AIStudioProps> = ({
 
   const handleFetchIdeas = async () => {
     setIsGettingIdeas(true);
+    setErrorMessage(null);
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -126,10 +137,13 @@ export const AIStudio: React.FC<AIStudioProps> = ({
             'Building full-stack React 19 & Express applications',
           ]);
         }
+      } else {
+        setErrorMessage(data.details || data.error || 'Failed to fetch ideas');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-    } fontally: {
+      setErrorMessage(err?.message || 'Network error while fetching ideas.');
+    } finally {
       setIsGettingIdeas(false);
     }
   };
@@ -212,6 +226,16 @@ export const AIStudio: React.FC<AIStudioProps> = ({
 
       {/* Tool Panel Content */}
       <div className="bg-[#121222] border border-[#23233c] rounded-3xl p-6 shadow-xl space-y-5">
+        {errorMessage && (
+          <div className="p-4 bg-red-950/60 border border-red-500/40 rounded-2xl text-xs text-red-200 leading-relaxed flex items-start gap-2">
+            <span className="text-base font-bold text-red-400">⚠️</span>
+            <div>
+              <p className="font-bold text-red-300 mb-0.5">AI Request Issue</p>
+              <p>{errorMessage}</p>
+            </div>
+          </div>
+        )}
+
         {activeTool === 'generator' && (
           <div className="space-y-4">
             <div>

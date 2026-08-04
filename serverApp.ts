@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 
 dotenv.config();
 
@@ -12,7 +12,7 @@ app.use(express.json({ limit: '10mb' }));
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is missing.');
+    throw new Error('GEMINI_API_KEY is missing. If you deployed to Vercel, add GEMINI_API_KEY in your Vercel Project Settings > Environment Variables.');
   }
   return new GoogleGenAI({
     apiKey,
@@ -24,13 +24,15 @@ function getGeminiClient() {
   });
 }
 
+const router = express.Router();
+
 // API Health Check
-app.get('/api/health', (req, res) => {
+router.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'Wave Social API' });
 });
 
 // AI Post Generator Endpoint
-app.post('/api/ai/generate-post', async (req, res) => {
+router.post('/ai/generate-post', async (req, res) => {
   try {
     const { topic, tone = 'engaging', format = 'standard', includeHashtags = true } = req.body;
     
@@ -44,19 +46,23 @@ app.post('/api/ai/generate-post', async (req, res) => {
 Tone: ${tone}
 Format: ${format} (options: standard post, thread starter, question/poll style, concise insight)
 Target audience: Tech creators, designers, AI enthusiasts, digital innovators.
-${includeHashtags ? 'Include 3 to 5 trending hashtags.' : 'Do not include hashtags.'}
-
-Return JSON with keys:
-- "postContent": string (the main post text)
-- "suggestedHashtags": array of strings (without # symbol)
-- "imagePrompt": string (a descriptive prompt for generating or matching a visual graphic)
-- "catchyTitle": string`;
+${includeHashtags ? 'Include 3 to 5 trending hashtags.' : 'Do not include hashtags.'}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.6-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            postContent: { type: Type.STRING },
+            suggestedHashtags: { type: Type.ARRAY, items: { type: Type.STRING } },
+            imagePrompt: { type: Type.STRING },
+            catchyTitle: { type: Type.STRING },
+          },
+          required: ['postContent', 'suggestedHashtags'],
+        },
       },
     });
 
@@ -78,15 +84,15 @@ Return JSON with keys:
     console.error('AI Post Generator error:', error?.message || error);
     res.status(500).json({
       error: 'Failed to generate post with Gemini AI.',
-      details: error?.message,
+      details: error?.message || String(error),
     });
   }
 });
 
 // AI Assistant Chat Endpoint
-app.post('/api/ai/chat', async (req, res) => {
+router.post('/ai/chat', async (req, res) => {
   try {
-    const { message, conversationHistory = [] } = req.body;
+    const { message } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
@@ -116,13 +122,13 @@ Keep responses concise, formatted nicely with markdown or bullet points when app
     console.error('AI Chat error:', error?.message || error);
     res.status(500).json({
       error: 'Failed to communicate with Wave AI.',
-      details: error?.message,
+      details: error?.message || String(error),
     });
   }
 });
 
 // AI Text Polish / Enhancer Endpoint
-app.post('/api/ai/enhance-post', async (req, res) => {
+router.post('/ai/enhance-post', async (req, res) => {
   try {
     const { draftText, action = 'enhance' } = req.body;
 
@@ -156,13 +162,13 @@ app.post('/api/ai/enhance-post', async (req, res) => {
     console.error('AI Polish error:', error?.message || error);
     res.status(500).json({
       error: 'Failed to enhance post.',
-      details: error?.message,
+      details: error?.message || String(error),
     });
   }
 });
 
 // AI Smart Reply / Comment Suggester
-app.post('/api/ai/smart-reply', async (req, res) => {
+router.post('/ai/smart-reply', async (req, res) => {
   try {
     const { postContent } = req.body;
     if (!postContent) {
@@ -171,14 +177,20 @@ app.post('/api/ai/smart-reply', async (req, res) => {
 
     const ai = getGeminiClient();
 
-    const prompt = `Given the following social media post:\n"${postContent}"\n\nProvide 3 quick, natural, engaging comment suggestions for a user.
-Return JSON format: { "suggestions": ["comment 1", "comment 2", "comment 3"] }`;
+    const prompt = `Given the following social media post:\n"${postContent}"\n\nProvide 3 quick, natural, engaging comment suggestions for a user.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.6-flash',
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            suggestions: { type: Type.ARRAY, items: { type: Type.STRING } },
+          },
+          required: ['suggestions'],
+        },
       },
     });
 
@@ -188,9 +200,13 @@ Return JSON format: { "suggestions": ["comment 1", "comment 2", "comment 3"] }`;
     console.error('Smart reply error:', error?.message || error);
     res.status(500).json({
       error: 'Failed to get smart replies.',
-      details: error?.message,
+      details: error?.message || String(error),
     });
   }
 });
+
+// Mount router on both /api and / to handle Vercel rewrite paths automatically
+app.use('/api', router);
+app.use('/', router);
 
 export default app;

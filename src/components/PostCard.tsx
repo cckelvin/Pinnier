@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, MessageCircle, Repeat, Bookmark, Share2, Sparkles, Send, CheckCircle2, MoreHorizontal, MessageSquareCode } from 'lucide-react';
 import { Post, Comment, User } from '../types';
+import { safeApiCall } from '../lib/apiHelper';
 
 interface PostCardProps {
   post: Post;
@@ -39,12 +40,11 @@ export const PostCard: React.FC<PostCardProps> = ({
   const handleFetchSmartReplies = async () => {
     setIsGettingSmartReplies(true);
     try {
-      const res = await fetch('/api/ai/smart-reply', {
+      const data = await safeApiCall('/api/ai/smart-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postContent: post.content }),
       });
-      const data = await res.json();
       if (data.success && Array.isArray(data.suggestions)) {
         setSmartReplies(data.suggestions);
       }

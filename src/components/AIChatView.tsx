@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Sparkles, MessageSquare, User, Bot, RefreshCw, Copy, Check, ChevronRight } from 'lucide-react';
 import { ChatMessage } from '../types';
+import { safeApiCall } from '../lib/apiHelper';
 
 interface AIChatViewProps {
   onOpenCreatePostWithIdea?: (text: string) => void;
@@ -44,13 +45,12 @@ export const AIChatView: React.FC<AIChatViewProps> = ({ onOpenCreatePostWithIdea
     setIsLoading(true);
 
     try {
-      const res = await fetch('/api/ai/chat', {
+      const data = await safeApiCall('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMsg.text }),
       });
 
-      const data = await res.json();
       if (data.success && data.reply) {
         const aiMsg: ChatMessage = {
           id: `ai_${Date.now()}`,
@@ -65,7 +65,7 @@ export const AIChatView: React.FC<AIChatViewProps> = ({ onOpenCreatePostWithIdea
       }
     } catch (err: any) {
       const errorText = err?.message
-        ? `⚠️ AI Error: ${err.message}`
+        ? `⚠️ ${err.message}`
         : "I'm having trouble connecting right now. If deployed on Vercel, check that GEMINI_API_KEY is added to Vercel Environment Variables.";
 
       const errorMsg: ChatMessage = {

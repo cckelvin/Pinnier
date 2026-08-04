@@ -209,4 +209,13 @@ router.post('/ai/smart-reply', async (req, res) => {
 app.use('/api', router);
 app.use('/', router);
 
+// Global Error Handler to guarantee JSON responses
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error('Unhandled server error:', err);
+  res.status(500).json({
+    error: 'An internal server error occurred',
+    details: err?.message || String(err),
+  });
+});
+
 export default app;

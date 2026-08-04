@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Wand2, RefreshCw, Copy, Check, Send, Lightbulb, MessageSquareQuote, Layers, Tag, Feather } from 'lucide-react';
 import { Post, User, Channel } from '../types';
+import { safeApiCall } from '../lib/apiHelper';
 
 interface AIStudioProps {
   currentUser: User;
@@ -56,12 +57,11 @@ export const AIStudio: React.FC<AIStudioProps> = ({
     setErrorMessage(null);
 
     try {
-      const res = await fetch('/api/ai/generate-post', {
+      const data = await safeApiCall('/api/ai/generate-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, tone, format, includeHashtags: true }),
       });
-      const data = await res.json();
       if (data.success) {
         setGeneratedOutput({
           postContent: data.postContent,
@@ -85,12 +85,11 @@ export const AIStudio: React.FC<AIStudioProps> = ({
     setIsEnhancing(true);
     setErrorMessage(null);
     try {
-      const res = await fetch('/api/ai/enhance-post', {
+      const data = await safeApiCall('/api/ai/enhance-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ draftText: draftInput, action: enhanceAction }),
       });
-      const data = await res.json();
       if (data.success) {
         setEnhancedResult(data.enhancedText);
       } else {
@@ -108,14 +107,13 @@ export const AIStudio: React.FC<AIStudioProps> = ({
     setIsGettingIdeas(true);
     setErrorMessage(null);
     try {
-      const res = await fetch('/api/ai/chat', {
+      const data = await safeApiCall('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: 'Give me 4 viral social media post concepts for tech & AI creators in JSON list format: ["concept 1", "concept 2", "concept 3", "concept 4"]',
         }),
       });
-      const data = await res.json();
       if (data.success && data.reply) {
         try {
           const match = data.reply.match(/\[[\s\S]*\]/);

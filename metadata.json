@@ -1,0 +1,6 @@
+{
+  "name": "Wave Social",
+  "description": "A next-gen AI-powered social platform to connect, share, explore channels, and create with Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
